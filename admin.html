@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>儀表板管理後台</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#16332C;--ink2:#0F241F;--gold:#C19A53;--gold-soft:#E5D5B3;--bg:#F4F1E8;--paper:#fff;--paper2:#FAF8F2;
+--line:#DDD6C6;--text:#1E2421;--dim:#5C645F;--mute:#9AA09B;--red:#A93B26;--green:#2F6B4F;--amber:#8A6A2F;
+--serif:'Noto Serif TC',serif;--sans:'Noto Sans TC',sans-serif;--mono:'IBM Plex Mono',monospace}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6}
+button{font-family:var(--sans);cursor:pointer}
+input,textarea,select{font-family:var(--sans);font-size:14px;color:var(--text);background:var(--paper);
+border:1px solid var(--line);padding:8px 10px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:64px}
+label{display:block;font-size:12px;color:var(--dim);letter-spacing:.06em;margin:10px 0 3px;font-weight:500}
+.btn{padding:9px 18px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700;letter-spacing:.08em;transition:.12s}
+.btn:hover{background:var(--ink);color:var(--gold-soft)}
+.btn.primary{background:var(--ink);color:var(--gold-soft)}
+.btn.primary:hover{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+.btn.small{padding:5px 10px;font-size:12.5px}
+.topbar{background:var(--ink);color:#F2EDE0;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar h1{font-family:var(--serif);font-size:19px;font-weight:900;letter-spacing:.08em}
+.topbar .st{font-family:var(--mono);font-size:12px;color:var(--gold-soft)}
+.topbar .sp{flex:1}
+/* login */
+#loginView{max-width:520px;margin:60px auto;background:var(--paper);border:2px solid var(--ink);padding:30px}
+#loginView h2{font-family:var(--serif);font-weight:900;font-size:22px;margin-bottom:4px}
+#loginView .hint{font-size:13px;color:var(--dim);margin-bottom:10px}
+.howto{margin-top:18px;background:var(--paper2);border:1px solid var(--line);padding:14px 16px;font-size:13px;color:var(--dim);line-height:1.8}
+.howto b{color:var(--text)}
+/* layout */
+#appView{display:none}
+.wrap{display:grid;grid-template-columns:300px 1fr;gap:0;max-width:1560px;margin:0 auto;min-height:calc(100vh - 60px)}
+.side{background:var(--paper);border-right:1px solid var(--line);padding:14px}
+.side h3{font-family:var(--serif);font-size:14px;letter-spacing:.2em;color:var(--ink);margin:6px 0 8px}
+.plist{display:flex;flex-direction:column;gap:4px;max-height:60vh;overflow:auto}
+.pitem{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--line);background:var(--paper2);cursor:pointer;font-size:14px}
+.pitem.active{border-color:var(--ink);background:var(--ink);color:var(--gold-soft)}
+.pitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .mv{font-family:var(--mono);font-size:11px;opacity:.6;cursor:pointer;padding:0 3px}
+.pitem .mv:hover{opacity:1}
+.editor{padding:18px 26px 80px}
+.sec{background:var(--paper);border:1px solid var(--line);margin-bottom:14px}
+.sec-h{padding:11px 16px;background:var(--paper2);border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:700;letter-spacing:.14em;font-size:14px;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;user-select:none}
+.sec-h::after{content:'▾';color:var(--gold)}
+.sec.closed .sec-h::after{content:'▸'}
+.sec.closed .sec-b{display:none}
+.sec-b{padding:6px 16px 16px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px}
+.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:0 16px}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px}
+.chk input{width:auto}
+.list-edit{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.list-edit .li{display:flex;gap:6px}
+.list-edit .li input{flex:1}
+.amen-cat{border:1px dashed var(--line);padding:10px;margin-top:8px}
+#pinMap{height:380px;border:1px solid var(--ink);margin-top:10px;display:none}
+.fp-pre{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:10px}
+.fp-pre .cell{position:relative}
+.fp-pre img{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid var(--line)}
+.fp-pre .rm{position:absolute;top:2px;right:2px;background:var(--red);color:#fff;border:none;width:22px;height:22px;font-size:13px}
+.savebar{position:fixed;bottom:0;left:0;right:0;background:var(--ink);padding:12px 26px;display:flex;gap:12px;align-items:center;z-index:500}
+.savebar .msg{color:var(--gold-soft);font-family:var(--mono);font-size:13px;flex:1}
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--gold-soft);padding:12px 26px;font-family:var(--mono);font-size:14px;z-index:9999;display:none;box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.dirty-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--gold);margin-left:6px;visibility:hidden}
+.dirty .dirty-dot{visibility:visible}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid var(--line)}.row2,.row3,.row4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>儀表板管理後台</h1>
+  <span class="st" id="repoSt"></span>
+  <span class="sp"></span>
+  <button class="btn small" id="btnLogout" style="display:none;border-color:var(--gold-soft);color:var(--gold-soft);background:transparent" onclick="logout()">登出</button>
+</div>
+
+<!-- ───────── 登入 ───────── -->
+<div id="loginView">
+  <h2>管理者登入</h2>
+  <div class="hint">輸入 GitHub Token 後即可讀取並編輯網站資料。Token 只儲存在你這台裝置的瀏覽器中。</div>
+  <label>GitHub Token</label>
+  <input type="password" id="inToken" placeholder="ghp_ 或 github_pat_ 開頭">
+  <div class="row2">
+    <div><label>帳號（owner）</label><input id="inOwner" value="normalsky315-jpg"></div>
+    <div><label>Repo 名稱</label><input id="inRepo" value="NKUinfos"></div>
+  </div>
+  <div class="row2">
+    <div><label>分支</label><input id="inBranch" value="main"></div>
+    <div><label>資料檔</label><input id="inPath" value="data.json"></div>
+  </div>
+  <div style="margin-top:16px"><button class="btn primary" style="width:100%" onclick="login()">登入並載入資料</button></div>
+  <div class="howto">
+    <b>第一次使用？Token 申請步驟（約 5 分鐘）</b><br>
+    1. 登入 GitHub → 右上頭像 → <b>Settings</b><br>
+    2. 左欄最底 <b>Developer settings</b> → <b>Personal access tokens → Fine-grained tokens</b> → <b>Generate new token</b><br>
+    3. 名稱隨意（如 NKU後台）、Expiration 選 <b>90 days 或 custom 一年</b><br>
+    4. Repository access 選 <b>Only select repositories</b> → 勾 <b>NKUinfos</b><br>
+    5. Permissions → Repository permissions → <b>Contents</b> 改成 <b>Read and write</b><br>
+    6. 按 Generate，把 <code>github_pat_…</code> 整串複製貼到上面欄位<br>
+    ※ Token 等同你的鑰匙，不要貼給任何人、不要存在共用電腦。
+  </div>
+</div>
+
+<!-- ───────── 主畫面 ───────── -->
+<div id="appView">
+<div class="wrap">
+  <div class="side">
+    <h3>建 案 清 單</h3>
+    <div class="plist" id="plist"></div>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="btn small" style="flex:1" onclick="addProject()">＋ 新增建案</button>
+      <button class="btn small danger" onclick="delProject()">刪除目前</button>
+    </div>
+    <h3 style="margin-top:20px">全 域 設 定</h3>
+    <label>儀表板標題</label><input id="g_title">
+    <label>副標題</label><input id="g_subtitle">
+    <div class="row2">
+      <div><label>版本號</label><input id="g_version"></div>
+      <div><label>資料年月</label><input id="g_dataDate"></div>
+    </div>
+    <div class="row3">
+      <div><label>基準價</label><input id="g_base" type="number" step="0.01"></div>
+      <div><label>溢價門檻%</label><input id="g_premiumPct" type="number" step="0.5"></div>
+      <div><label>折價門檻%</label><input id="g_discountPct" type="number" step="0.5"></div>
+    </div>
+    <h3 style="margin-top:20px">工 具</h3>
+    <button class="btn small" style="width:100%;margin-bottom:6px" onclick="downloadBackup()">⬇ 下載 data.json 備份</button>
+    <button class="btn small" style="width:100%;margin-bottom:6px" onclick="downloadOffline()">⬇ 下載 USB 離線單檔版</button>
+    <button class="btn small" style="width:100%" onclick="reloadRemote()">↻ 重新載入線上資料</button>
+  </div>
+
+  <div class="editor" id="editor"></div>
+</div>
+
+<div class="savebar">
+  <span class="msg" id="saveMsg">—</span>
+  <button class="btn" style="border-color:var(--gold-soft);color:var(--gold-soft);background:transparent" onclick="downloadBackup()">先備份</button>
+  <button class="btn primary" id="btnSave" onclick="publish()">儲存發布 →</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS='nku_admin_cfg';
+let CFG=null, DB=null, SHA=null, cur=0, dirty=false, pinMap=null, pinMarker=null;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(m,ms=2600){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',ms)}
+function markDirty(){dirty=true;$('saveMsg').textContent='● 有未發布的變更';$('saveMsg').style.color='#E5C97B'}
+function markClean(m){dirty=false;$('saveMsg').textContent=m||'已與線上同步';$('saveMsg').style.color='var(--gold-soft)'}
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+/* ── GitHub API ── */
+const apiURL=()=>`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${CFG.path}`;
+const hdr=()=>({Authorization:'Bearer '+CFG.token,Accept:'application/vnd.github+json'});
+function b64encode(str){return btoa(String.fromCharCode(...new TextEncoder().encode(str)))}
+function b64decode(b){return new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g,'')),c=>c.charCodeAt(0)))}
+
+async function ghLoad(){
+  const r=await fetch(apiURL()+'?ref='+CFG.branch+'&t='+Date.now(),{headers:hdr()});
+  if(!r.ok) throw new Error(r.status===401||r.status===403?'Token 無效或權限不足':r.status===404?'找不到 '+CFG.path+'（檢查 repo / 分支 / 檔名）':'HTTP '+r.status);
+  const j=await r.json();
+  SHA=j.sha;
+  return JSON.parse(b64decode(j.content));
+}
+async function ghSave(json,msg){
+  const r=await fetch(apiURL(),{method:'PUT',headers:{...hdr(),'Content-Type':'application/json'},
+    body:JSON.stringify({message:msg,content:b64encode(JSON.stringify(json,null,1)),sha:SHA,branch:CFG.branch})});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error('儲存失敗 HTTP '+r.status+'：'+(e.message||''))}
+  const j=await r.json(); SHA=j.content.sha;
+}
+
+/* ── 登入 ── */
+async function login(){
+  CFG={token:$('inToken').value.trim(),owner:$('inOwner').value.trim(),repo:$('inRepo').value.trim(),
+       branch:$('inBranch').value.trim(),path:$('inPath').value.trim()};
+  if(!CFG.token){toast('請輸入 Token');return}
+  try{
+    DB=await ghLoad();
+    localStorage.setItem(LS,JSON.stringify(CFG));
+    enterApp();
+  }catch(e){toast('登入失敗：'+e.message,5000)}
+}
+function logout(){localStorage.removeItem(LS);location.reload()}
+function enterApp(){
+  $('loginView').style.display='none';$('appView').style.display='block';$('btnLogout').style.display='';
+  $('repoSt').textContent=`${CFG.owner}/${CFG.repo} · ${CFG.branch}`;
+  ['title','subtitle','version','dataDate','base','premiumPct','discountPct'].forEach(k=>{
+    $('g_'+k).value=DB.settings[k];
+    $('g_'+k).oninput=()=>{DB.settings[k]=(k==='base'||k==='premiumPct'||k==='discountPct')?parseFloat($('g_'+k).value)||0:$('g_'+k).value;markDirty()};
+  });
+  cur=0; renderList(); renderForm(); markClean();
+}
+async function reloadRemote(){
+  if(dirty&&!confirm('有未發布的變更，重新載入會覆蓋掉。確定？'))return;
+  try{DB=await ghLoad();enterApp();toast('已重新載入線上資料')}catch(e){toast(e.message,4500)}
+}
+
+/* ── 清單 ── */
+function renderList(){
+  $('plist').innerHTML=DB.projects.map((p,i)=>`
+    <div class="pitem ${i===cur?'active':''}" onclick="selProject(${i})">
+      <span class="nm">${esc(p.name)||'(未命名)'}</span>
+      <span class="mv" onclick="event.stopPropagation();moveProject(${i},-1)">▲</span>
+      <span class="mv" onclick="event.stopPropagation();moveProject(${i},1)">▼</span>
+    </div>`).join('');
+}
+function selProject(i){cur=i;renderList();renderForm()}
+function moveProject(i,d){
+  const j=i+d; if(j<0||j>=DB.projects.length)return;
+  [DB.projects[i],DB.projects[j]]=[DB.projects[j],DB.projects[i]];
+  if(cur===i)cur=j;else if(cur===j)cur=i;
+  renderList();markDirty();
+}
+function addProject(){
+  DB.projects.push({name:'新建案',dev:'',status:'預售屋',addr:'',permit:'-',floor:'',
+    avgPrice:36,minPrice:0,maxPrice:0,count:0,units:0,layout:'',r1:0,r2:0,r3:0,r4:0,
+    loan:'80%',handover:'',kit:[],bath:[],other:[],amenities:{},notes:'',analysis:'',
+    vs:'',vsPublic:false,tagMode:'auto',tagManual:'normal',warn:false,warnReason:'',
+    lat:22.728,lng:120.283,s591:'',floorPlans:[]});
+  cur=DB.projects.length-1;renderList();renderForm();markDirty();
+}
+function delProject(){
+  const p=DB.projects[cur];
+  if(!confirm(`確定刪除「${p.name}」？此動作要按「儲存發布」後才會真正生效。`))return;
+  DB.projects.splice(cur,1);
+  if(!DB.projects.length)addProject();
+  cur=Math.min(cur,DB.projects.length-1);
+  renderList();renderForm();markDirty();
+}
+
+/* ── 表單 ── */
+function fld(label,key,type='text',attrs=''){
+  return `<div><label>${label}</label><input id="f_${key}" type="${type}" ${attrs}></div>`;
+}
+function renderForm(){
+  const p=DB.projects[cur];
+  $('editor').innerHTML=`
+  <div class="sec"><div class="sec-h" onclick="tog(this)">基 本 資 料</div><div class="sec-b">
+    <div class="row2">${fld('案名','name')}${fld('建商','dev')}</div>
+    <div class="row3">
+      <div><label>狀態</label><select id="f_status"><option>預售屋</option><option>新成屋</option><option>成屋</option></select></div>
+      ${fld('樓層（如 15F/B3）','floor')}${fld('交屋時間','handover')}
+    </div>
+    ${fld('地址','addr')}
+    <div class="row2">${fld('建造執照','permit')}${fld('貸款成數','loan')}</div>
+    ${fld('591 連結','s591')}
+    <div class="chk"><input type="checkbox" id="f_warn"><label style="margin:0">⚠ 警示標記</label></div>
+    <div id="warnWrap">${fld('警示原因','warnReason')}</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-h" onclick="tog(this)">價 格 與 成 交</div><div class="sec-b">
+    <div class="row3">${fld('均價（萬/坪）','avgPrice','number','step="0.01"')}${fld('最低價','minPrice','number','step="0.01"')}${fld('最高價','maxPrice','number','step="0.01"')}</div>
+    <div class="row2">${fld('成交筆數','count','number')}${fld('總戶數','units','number')}</div>
+    <div class="row2">
+      <div><label>定位標籤</label><select id="f_tagMode">
+        <option value="auto">自動（依門檻計算）</option><option value="manual">手動指定</option></select></div>
+      <div><label>手動標籤（選手動時生效）</label><select id="f_tagManual">
+        <option value="premium">溢價</option><option value="normal">均值</option><option value="discount">折價</option></select></div>
+    </div>
+    <div style="margin-top:8px;font-size:13px;color:var(--dim)" id="tagPreview"></div>
+  </div></div>
+
+  <div class="sec closed"><div class="sec-h" onclick="tog(this)">格 局 與 房 型</div><div class="sec-b">
+    ${fld('格局規劃（一行描述）','layout')}
+    <div class="row4">${fld('1房 %','r1','number')}${fld('2房 %','r2','number')}${fld('3房 %','r3','number')}${fld('4房 %','r4','number')}</div>
+  </div></div>
+
+  <div class="sec closed"><div class="sec-h" onclick="tog(this)">建 材 與 配 備</div><div class="sec-b">
+    <label>廚具（每行一項）</label><textarea id="f_kit"></textarea>
+    <label>衛浴（每行一項）</label><textarea id="f_bath"></textarea>
+    <label>特色配備（每行一項）</label><textarea id="f_other"></textarea>
+  </div></div>
+
+  <div class="sec closed"><div class="sec-h" onclick="tog(this)">公 設 設 施</div><div class="sec-b">
+    <div style="font-size:13px;color:var(--dim)">格式：每行「分類：項目、項目、項目」，例如<br><code>運動健身：健身房、瑜伽教室</code></div>
+    <textarea id="f_amenities" style="min-height:110px"></textarea>
+  </div></div>
+
+  <div class="sec"><div class="sec-h" onclick="tog(this)">文 字 與 分 析</div><div class="sec-b">
+    <label>對戰華雄音樂匯（一句攻防重點）</label><textarea id="f_vs"></textarea>
+    <div class="chk"><input type="checkbox" id="f_vsPublic"><label style="margin:0">公開顯示（取消勾選＝只有內部版看得到）</label></div>
+    <label>注意事項</label><textarea id="f_notes"></textarea>
+    <label>分析觀點</label><textarea id="f_analysis"></textarea>
+  </div></div>
+
+  <div class="sec closed"><div class="sec-h" onclick="tog(this)">平 面 圖（${(p.floorPlans||[]).length} 張）</div><div class="sec-b">
+    <label>貼上 Google Drive 分享連結或檔案 ID（自動轉縮圖網址）</label>
+    <div style="display:flex;gap:8px"><input id="fpInput" placeholder="https://drive.google.com/file/d/XXXX/view…"><button class="btn small" onclick="addFP()">加入</button></div>
+    <div class="fp-pre" id="fpPre"></div>
+  </div></div>
+
+  <div class="sec closed" id="pinSec"><div class="sec-h" onclick="tog(this);initPin()">位 置 編 輯（座標 ${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}）</div><div class="sec-b">
+    <div style="font-size:13px;color:var(--dim)">拖曳圖釘到正確的<b>基地位置</b>（非接待中心），或貼 Google Maps 連結解析座標。</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="gmapsIn" placeholder="貼 Google Maps 網址（含 @22.7xx,120.2xx）">
+      <button class="btn small" onclick="parseGmaps()">解析</button>
+    </div>
+    <div class="row2">${fld('緯度 lat','lat','number','step="0.000001"')}${fld('經度 lng','lng','number','step="0.000001"')}</div>
+    <div id="pinMap"></div>
+  </div></div>`;
+
+  // 填值
+  const set=(k,v)=>{const el=$('f_'+k);if(el)el.value=v??''};
+  ['name','dev','status','floor','handover','addr','permit','loan','s591','warnReason',
+   'avgPrice','minPrice','maxPrice','count','units','tagMode','tagManual',
+   'layout','r1','r2','r3','r4','vs','notes','analysis','lat','lng'].forEach(k=>set(k,p[k]));
+  $('f_warn').checked=!!p.warn; $('f_vsPublic').checked=!!p.vsPublic;
+  $('f_kit').value=(p.kit||[]).join('\n');
+  $('f_bath').value=(p.bath||[]).join('\n');
+  $('f_other').value=(p.other||[]).join('\n');
+  $('f_amenities').value=Object.entries(p.amenities||{}).map(([c,arr])=>`${c}：${arr.join('、')}`).join('\n');
+
+  // 綁定
+  const num=['avgPrice','minPrice','maxPrice','count','units','r1','r2','r3','r4','lat','lng'];
+  document.querySelectorAll('#editor input,#editor textarea,#editor select').forEach(el=>{
+    if(!el.id.startsWith('f_'))return;
+    el.addEventListener('input',()=>{
+      const k=el.id.slice(2);
+      if(k==='warn'){p.warn=el.checked}
+      else if(k==='vsPublic'){p.vsPublic=el.checked}
+      else if(k==='kit'||k==='bath'||k==='other'){p[k]=el.value.split('\n').map(s=>s.trim()).filter(Boolean)}
+      else if(k==='amenities'){
+        const o={};el.value.split('\n').forEach(line=>{
+          const m=line.split(/[:：]/);if(m.length>=2&&m[0].trim()){o[m[0].trim()]=m.slice(1).join(':').split(/[、,，]/).map(s=>s.trim()).filter(Boolean)}});
+        p.amenities=o;
+      }
+      else if(num.includes(k)){p[k]=parseFloat(el.value)||0}
+      else{p[k]=el.value}
+      if(k==='name')renderList();
+      if(k==='lat'||k==='lng')syncPin();
+      updTagPreview();markDirty();
+    });
+  });
+  renderFP(); updTagPreview(); pinMap=null;
+}
+function tog(h){h.parentElement.classList.toggle('closed')}
+function updTagPreview(){
+  const p=DB.projects[cur],S=DB.settings;
+  const pct=(p.avgPrice-S.base)/S.base*100;
+  const auto=pct>=S.premiumPct?'溢價':pct<=S.discountPct?'折價':'均值';
+  $('tagPreview').textContent=`目前 vs 基準 ${(pct>=0?'+':'')+pct.toFixed(1)}% → 自動判定：${auto}${p.tagMode==='manual'?'（手動覆寫中）':''}`;
+}
+
+/* ── 平面圖 ── */
+function driveID(s){
+  s=s.trim();
+  let m=s.match(/\/d\/([A-Za-z0-9_-]{20,})/)||s.match(/[?&]id=([A-Za-z0-9_-]{20,})/);
+  if(m)return m[1];
+  if(/^[A-Za-z0-9_-]{20,}$/.test(s))return s;
+  return null;
+}
+function addFP(){
+  const v=$('fpInput').value;
+  const id=driveID(v);
+  if(!id){toast('無法辨識 Drive 連結或檔案 ID');return}
+  DB.projects[cur].floorPlans=DB.projects[cur].floorPlans||[];
+  DB.projects[cur].floorPlans.push(`https://drive.google.com/thumbnail?id=${id}&sz=w1200`);
+  $('fpInput').value='';renderFP();markDirty();
+}
+function rmFP(i){DB.projects[cur].floorPlans.splice(i,1);renderFP();markDirty()}
+function renderFP(){
+  const arr=DB.projects[cur].floorPlans||[];
+  $('fpPre').innerHTML=arr.map((u,i)=>`<div class="cell"><img src="${esc(u)}" loading="lazy" onerror="this.style.opacity=.25"><button class="rm" onclick="rmFP(${i})">×</button></div>`).join('');
+}
+
+/* ── 位置編輯 ── */
+function initPin(){
+  const sec=$('pinSec');
+  if(sec.classList.contains('closed'))return;
+  $('pinMap').style.display='block';
+  setTimeout(()=>{
+    const p=DB.projects[cur];
+    if(!pinMap){
+      pinMap=L.map('pinMap').setView([p.lat,p.lng],16);
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{subdomains:['0','1','2','3'],maxZoom:20,attribution:'&copy; Google'}).addTo(pinMap);
+      pinMarker=L.marker([p.lat,p.lng],{draggable:true}).addTo(pinMap);
+      pinMarker.on('dragend',()=>{
+        const ll=pinMarker.getLatLng();
+        const q=DB.projects[cur];
+        q.lat=+ll.lat.toFixed(6); q.lng=+ll.lng.toFixed(6);
+        $('f_lat').value=q.lat; $('f_lng').value=q.lng;
+        markDirty();
+      });
+    }
+    pinMap.invalidateSize();
+    pinMap.setView([p.lat,p.lng],16);
+    pinMarker.setLatLng([p.lat,p.lng]);
+  },60);
+}
+function syncPin(){
+  const p=DB.projects[cur];
+  if(pinMap&&pinMarker&&p.lat&&p.lng){pinMarker.setLatLng([p.lat,p.lng]);pinMap.setView([p.lat,p.lng])}
+}
+function parseGmaps(){
+  const v=$('gmapsIn').value;
+  let m=v.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||v.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/)||v.match(/(-?\d{2}\.\d{4,}),\s*(-?\d{3}\.\d{4,})/);
+  if(!m){toast('連結中找不到座標（需含 @緯度,經度）');return}
+  const p=DB.projects[cur];
+  p.lat=parseFloat(m[1]);p.lng=parseFloat(m[2]);
+  $('f_lat').value=p.lat;$('f_lng').value=p.lng;
+  syncPin();markDirty();toast('座標已更新');
+}
+
+/* ── 發布與工具 ── */
+async function publish(){
+  const n=DB.projects.length;
+  if(!confirm(`即將發布：共 ${n} 案。\n發布後約 1～2 分鐘前台生效。確定？`))return;
+  $('btnSave').disabled=true;$('btnSave').textContent='發布中…';
+  try{
+    await ghSave(DB,`admin: update data.json (${n} 案) ${new Date().toISOString().slice(0,16)}`);
+    markClean('✓ 已發布 '+new Date().toLocaleTimeString());
+    toast('發布成功！前台約 1～2 分鐘後更新');
+  }catch(e){
+    toast(e.message+'　(若顯示 409/conflict，按「重新載入線上資料」後重改)',7000);
+  }
+  $('btnSave').disabled=false;$('btnSave').textContent='儲存發布 →';
+}
+function downloadBackup(){
+  const blob=new Blob([JSON.stringify(DB,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`data_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+async function downloadOffline(){
+  try{
+    const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/index.html?ref=${CFG.branch}&t=${Date.now()}`,{headers:hdr()});
+    if(!r.ok)throw new Error('讀不到 index.html');
+    const html=b64decode((await r.json()).content);
+    const inject=`<script>window.__DATA__=${JSON.stringify(DB)};<\/script>\n<script>`;
+    const out=html.replace(/<script>\s*let DB=null/, inject+'\nlet DB=null');
+    const blob=new Blob([out],{type:'text/html'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='高大特區儀表板_離線版.html';
+    a.click();
+    toast('離線版已下載（含目前編輯中的資料）');
+  }catch(e){toast('產生失敗：'+e.message,5000)}
+}
+
+/* ── 啟動 ── */
+(function(){
+  const saved=localStorage.getItem(LS);
+  if(saved){
+    CFG=JSON.parse(saved);
+    $('inToken').value=CFG.token;$('inOwner').value=CFG.owner;$('inRepo').value=CFG.repo;
+    $('inBranch').value=CFG.branch;$('inPath').value=CFG.path;
+    login();
+  }
+})();
+</script>
+</body>
+</html>
