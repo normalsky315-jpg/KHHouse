@@ -154,7 +154,7 @@ label{display:block;font-size:12px;color:var(--dim);letter-spacing:.06em;margin:
 <div class="toast" id="toast"></div>
 
 <script>
-const LS='nku_admin_cfg';
+const LS='khhouse_admin_cfg';
 let CFG=null, DB=null, SHA=null, cur=0, dirty=false, pinMap=null, pinMarker=null;
 
 const $=id=>document.getElementById(id);
@@ -212,12 +212,22 @@ async function reloadRemote(){
 
 /* ── 清單 ── */
 function renderList(){
-  $('plist').innerHTML=DB.projects.map((p,i)=>`
+  let html='', lastDist=null;
+  DB.projects.forEach((p,i)=>{
+    const d=p.district||'未分區';
+    if(d!==lastDist){
+      const n=DB.projects.filter(q=>(q.district||'未分區')===d).length;
+      html+=`<div style="padding:8px 10px 4px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--gold);border-bottom:1px solid var(--line)">${esc(d)}（${n} 案）</div>`;
+      lastDist=d;
+    }
+    html+=`
     <div class="pitem ${i===cur?'active':''}" onclick="selProject(${i})">
       <span class="nm">${esc(p.name)||'(未命名)'}</span>
       <span class="mv" onclick="event.stopPropagation();moveProject(${i},-1)">▲</span>
       <span class="mv" onclick="event.stopPropagation();moveProject(${i},1)">▼</span>
-    </div>`).join('');
+    </div>`;
+  });
+  $('plist').innerHTML=html;
 }
 function selProject(i){cur=i;renderList();renderForm()}
 function moveProject(i,d){
