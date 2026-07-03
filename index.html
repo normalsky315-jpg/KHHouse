@@ -460,7 +460,7 @@ function openModal(i){
     <div class="price-hero">
       ${hasPrice(p)?`<span class="ph-num" style="color:${pc}">${p.avgPrice.toFixed(2)}</span>
       <span class="ph-unit">萬/坪</span>
-      <span style="font-size:14px;font-family:var(--mono);color:var(--dim)">${p.minPrice} ~ ${p.maxPrice} · ${p.count} 筆成交</span>`
+      <span style="font-size:14px;font-family:var(--mono);color:var(--dim)">${p.minPrice} ~ ${p.maxPrice}${p.count!=null?` · ${p.count} 筆成交`:''}</span>`
       :`<span class="ph-num" style="color:var(--amber);font-size:34px">${p.askPrice?esc(p.askPrice):'價格待定'}</span>
       <span class="ph-unit">${p.askPrice?'開價（實價登錄待累積）':''}</span>`}</div>
     ${(p.vs&&p.vs.trim())?`<div class="vs-box"><span class="al">對戰華雄音樂匯${p.vsPublic?'':'（內部）'}</span>${esc(p.vs)}</div>`:''}
