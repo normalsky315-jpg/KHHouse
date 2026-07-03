@@ -241,9 +241,7 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
     <button class="vbtn active" id="btnList" onclick="setView('list')">卡 片</button>
     <button class="vbtn" id="btnMap" onclick="setView('map')">地 圖</button>
     <input class="search-inp" id="searchInput" placeholder="搜尋案名、建商、建材…">
-    <select class="fil" id="districtFilter">
-      <option value="all">全部行政區</option>
-    </select>
+    <span id="districtTabs" style="display:flex;gap:8px"></span>
     <select class="fil" id="tagFilter">
       <option value="all">全部定位</option><option value="premium">溢價</option>
       <option value="normal">均值</option><option value="discount">折價</option>
@@ -298,7 +296,15 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 </div>
 
 <script>
-let DB=null, projects=[], S=null;
+let DB=null, projects=[], S=null, curDist='all';
+const scoped=()=>curDist==='all'?projects:projects.filter(p=>p.district===curDist);
+const distBase=()=>curDist!=='all'?((S.districtBase&&S.districtBase[curDist])||S.base):S.base;
+function setDistrict(d){
+  curDist=d;
+  document.querySelectorAll('#districtTabs .vbtn').forEach(b=>b.classList.toggle('active',b.dataset.d===d));
+  renderHeader(); renderCards();
+  if(mapObj){buildMarkers();}
+}
 
 const baseOf=p=>(S.districtBase&&S.districtBase[p.district])||S.base;
 const hasPrice=p=>typeof p.avgPrice==='number'&&p.avgPrice>0;
@@ -324,36 +330,36 @@ function renderHeader(){
   document.getElementById('hTitle').textContent=S.title;
   document.getElementById('hSub').textContent=`${S.subtitle} · ${S.version} · 資料 ${S.dataDate}`;
   document.title=S.title;
-  const nDist=new Set(projects.map(p=>p.district).filter(Boolean)).size;
+  const sp=scoped(), base=distBase();
+  const distLabel=curDist==='all'?`${new Set(projects.map(p=>p.district).filter(Boolean)).size} 區`:curDist;
   document.getElementById('mastStats').innerHTML=`
-    <div class="mstat"><div class="l">案數</div><div class="v">${projects.length}</div><div class="s">CASES</div></div>
-    <div class="mstat"><div class="l">行政區</div><div class="v">${nDist}</div><div class="s">DISTRICTS</div></div>
-    <div class="mstat"><div class="l">區域基準</div><div class="v">${S.base.toFixed(2)}<small>萬/坪</small></div><div class="s">BASELINE</div></div>`;
+    <div class="mstat"><div class="l">行政區</div><div class="v" style="font-size:24px">${esc(distLabel)}</div><div class="s">DISTRICT</div></div>
+    <div class="mstat"><div class="l">案數</div><div class="v">${sp.length}</div><div class="s">CASES</div></div>
+    <div class="mstat"><div class="l">區域基準</div><div class="v">${base.toFixed(2)}<small>萬/坪</small></div><div class="s">BASELINE</div></div>`;
 
-  const thHi=S.base*(1+S.premiumPct/100), thLo=S.base*(1+S.discountPct/100);
+  const thHi=base*(1+S.premiumPct/100), thLo=base*(1+S.discountPct/100);
   document.getElementById('kpiRow').innerHTML=`
-    <div class="kpi"><div class="l">溢價門檻 +${S.premiumPct}%</div><div class="v red">${thHi.toFixed(2)}</div><div class="s">≥ 此為紅標（各區依自身基準）</div></div>
-    <div class="kpi"><div class="l">折價門檻 ${S.discountPct}%</div><div class="v green">${thLo.toFixed(2)}</div><div class="s">≤ 此為綠標（各區依自身基準）</div></div>`;
+    <div class="kpi"><div class="l">溢價門檻 +${S.premiumPct}%</div><div class="v red">${thHi.toFixed(2)}</div><div class="s">≥ 此為紅標</div></div>
+    <div class="kpi"><div class="l">折價門檻 ${S.discountPct}%</div><div class="v green">${thLo.toFixed(2)}</div><div class="s">≤ 此為綠標</div></div>`;
   document.getElementById('footer').textContent=`${S.title} · ${S.subtitle} · ${S.version}`;
 }
 
 /* ── 卡片 ── */
 function renderCards(){
   const search=document.getElementById('searchInput').value.toLowerCase();
-  const dist=document.getElementById('districtFilter').value;
   const tag=document.getElementById('tagFilter').value;
   const stat=document.getElementById('statusFilter').value;
   const sort=document.getElementById('sortSelect').value;
   let data=projects.map((p,i)=>({...p,idx:i,tag:tagOf(p),pct:pctOf(p),sold:getSold(p)}));
   if(search) data=data.filter(p=>[p.name,p.dev,p.addr,p.district,p.zone,...(p.kit||[]),...(p.bath||[]),...(p.other||[])].join(' ').toLowerCase().includes(search));
-  if(dist!=='all') data=data.filter(p=>p.district===dist);
+  if(curDist!=='all') data=data.filter(p=>p.district===curDist);
   if(tag!=='all') data=data.filter(p=>p.tag===tag);
   if(stat!=='all') data=data.filter(p=>p.status.includes(stat));
   if(sort==='price_desc') data.sort((a,b)=>(b.avgPrice??-1)-(a.avgPrice??-1));
   else if(sort==='price_asc') data.sort((a,b)=>(a.avgPrice??1e9)-(b.avgPrice??1e9));
   else if(sort==='sold_desc') data.sort((a,b)=>(b.sold?.pct||0)-(a.sold?.pct||0));
   else data.sort((a,b)=>(b.count||0)-(a.count||0));
-  document.getElementById('tblCt').textContent=`${data.length} / ${projects.length} 案`;
+  document.getElementById('tblCt').textContent=`${data.length} / ${scoped().length} 案`;
 
   document.getElementById('listView').innerHTML=data.map(p=>{
     const hasP=p.pct!=null;
@@ -389,12 +395,18 @@ function renderCards(){
 /* ── 地圖 ── */
 let mapObj=null,mapMarkers=[];
 function initMap(){
-  if(mapObj) return;
+  if(mapObj){buildMarkers();return}
   mapObj=L.map('theMap',{zoomControl:true,scrollWheelZoom:true}).setView([22.6870,120.3010],12);
   L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
     attribution:'&copy; Google',subdomains:['0','1','2','3'],maxZoom:20
   }).addTo(mapObj);
+  buildMarkers();
+}
+function buildMarkers(){
+  mapMarkers.forEach(m=>mapObj.removeLayer(m));
+  mapMarkers=[];
   projects.forEach((p,i)=>{
+    if(curDist!=='all'&&p.district!==curDist) return;
     if(p.lat==null||p.lng==null) return;
     const t=tagOf(p), pct=pctOf(p);
     let cls=p.status.includes('預售')?'presale':(t==='premium'?'premium':t==='discount'?'discount':'normal');
@@ -531,12 +543,17 @@ async function boot(){
     return;
   }
   S=DB.settings; projects=DB.projects;
-  const dsel=document.getElementById('districtFilter');
-  [...new Set(projects.map(p=>p.district).filter(Boolean))].forEach(d=>{
-    const o=document.createElement('option');o.value=d;o.textContent=d;dsel.appendChild(o);
+  const dists=[...new Set(projects.map(p=>p.district).filter(Boolean))];
+  const tabs=document.getElementById('districtTabs');
+  dists.forEach(d=>{
+    const b=document.createElement('button');
+    b.className='vbtn';b.dataset.d=d;b.textContent=d;
+    b.onclick=()=>setDistrict(d);tabs.appendChild(b);
   });
+  curDist=dists[0]||'all';
+  [...tabs.children].forEach(b=>b.classList.toggle('active',b.dataset.d===curDist));
   renderHeader(); renderCards();
-  ['searchInput','districtFilter','tagFilter','statusFilter','sortSelect'].forEach(id=>{
+  ['searchInput','tagFilter','statusFilter','sortSelect'].forEach(id=>{
     document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',renderCards);
   });
   setView('list');
