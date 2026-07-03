@@ -51,7 +51,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-si
 
 /* ───── 指標列 ───── */
 .kpis{background:var(--paper);border-bottom:1px solid var(--line)}
-.kpis-in{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
+.kpis-in{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr)}
 .kpi{padding:15px 22px;border-right:1px solid var(--line);position:relative}
 .kpi:last-child{border-right:0}
 .kpi::before{content:'';position:absolute;top:0;left:22px;width:26px;height:2px;background:var(--gold)}
@@ -112,6 +112,7 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 .cc-head{padding:16px 18px 11px;border-bottom:1px solid var(--line)}
 .cc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .cc-name{font-family:var(--serif);font-size:20px;font-weight:700;letter-spacing:.02em;line-height:1.25}
+.cc-devtop{font-size:12.5px;color:var(--dim);letter-spacing:.06em;margin-bottom:3px}
 .cc-price{font-family:var(--serif);font-size:25px;font-weight:700;white-space:nowrap;line-height:1.1}
 .cc-price small{font-size:12px;color:var(--dim);font-weight:400;font-family:var(--sans)}
 .cc-price.red{color:var(--red)} .cc-price.green{color:var(--green)} .cc-price.amber{color:var(--amber)}
@@ -207,8 +208,7 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 .footer{max-width:1560px;margin:0 auto;padding:0 36px 40px;font-family:var(--mono);font-size:11.5px;color:var(--mute);letter-spacing:.08em}
 
 @media(max-width:980px){
-  .kpis-in{grid-template-columns:repeat(3,1fr)}
-  .kpi:nth-child(3){border-right:0}
+  .kpis-in{grid-template-columns:repeat(2,1fr)}
   #listView{grid-template-columns:1fr}
   .info-grid{grid-template-columns:1fr}
   .mast-in{padding:22px 18px}
@@ -330,18 +330,10 @@ function renderHeader(){
     <div class="mstat"><div class="l">行政區</div><div class="v">${nDist}</div><div class="s">DISTRICTS</div></div>
     <div class="mstat"><div class="l">區域基準</div><div class="v">${S.base.toFixed(2)}<small>萬/坪</small></div><div class="s">BASELINE</div></div>`;
 
-  const withSold=projects.map(p=>({p,s:getSold(p)})).filter(x=>x.s);
-  const hiS=withSold.length?withSold.reduce((a,b)=>a.s.pct>=b.s.pct?a:b):null;
-  const loS=withSold.length?withSold.reduce((a,b)=>a.s.pct<=b.s.pct?a:b):null;
-  const totCount=projects.reduce((a,p)=>a+(p.count||0),0);
   const thHi=S.base*(1+S.premiumPct/100), thLo=S.base*(1+S.discountPct/100);
   document.getElementById('kpiRow').innerHTML=`
-    <div class="kpi"><div class="l">溢價門檻 +${S.premiumPct}%</div><div class="v red">${thHi.toFixed(2)}</div><div class="s">≥ 此為紅標</div></div>
-    <div class="kpi"><div class="l">折價門檻 ${S.discountPct}%</div><div class="v green">${thLo.toFixed(2)}</div><div class="s">≤ 此為綠標</div></div>
-    <div class="kpi"><div class="l">累計成交筆數</div><div class="v">${totCount.toLocaleString()}</div><div class="s">${projects.length} 案合計</div></div>
-    <div class="kpi"><div class="l">最高售出率</div><div class="v green">${hiS?hiS.s.pct+'%':'—'}</div><div class="s">${hiS?esc(hiS.p.name)+' '+hiS.p.count+'/'+hiS.p.units:''}</div></div>
-    <div class="kpi"><div class="l">最低售出率</div><div class="v red">${loS?loS.s.pct+'%':'—'}</div><div class="s">${loS?esc(loS.p.name)+' '+loS.p.count+'/'+loS.p.units:''}</div></div>
-    <div class="kpi"><div class="l">資料更新</div><div class="v" style="font-size:19px">${esc(S.dataDate)}</div><div class="s">民國年月</div></div>`;
+    <div class="kpi"><div class="l">溢價門檻 +${S.premiumPct}%</div><div class="v red">${thHi.toFixed(2)}</div><div class="s">≥ 此為紅標（各區依自身基準）</div></div>
+    <div class="kpi"><div class="l">折價門檻 ${S.discountPct}%</div><div class="v green">${thLo.toFixed(2)}</div><div class="s">≤ 此為綠標（各區依自身基準）</div></div>`;
   document.getElementById('footer').textContent=`${S.title} · ${S.subtitle} · ${S.version}`;
 }
 
@@ -378,10 +370,10 @@ function renderCards(){
       <div class="sold-bar"><div class="sold-fill ${soldColor(p.tag)}" style="width:${p.sold.pct}%"></div></div>
       <div class="sold-sub">${p.sold.text}</div></div>`:'';
     return `<div class="case-card ${p.tag}${p.warn?' warn':''}" onclick="openModal(${p.idx})">
-      <div class="cc-head"><div class="cc-top">
+      <div class="cc-head">${p.dev?`<div class="cc-devtop">${esc(p.dev)}</div>`:''}<div class="cc-top">
         <div class="cc-name">${esc(p.name)}${p.warn?' ⚠':''}</div>
         <div class="cc-price ${prCls}"${hasP?'':' style="font-size:17px"'}>${hasP?p.avgPrice.toFixed(2)+'<small> 萬</small>':(p.askPrice?esc(p.askPrice)+'<small> 開價</small>':'待定')}</div></div>
-        <div class="cc-meta">${p.district?`<span class="status-pill sp-done">${esc(p.district)}</span>`:''}${p.zone?`<span class="status-pill sp-pre">${esc(p.zone)}</span>`:''}<span class="cc-dev">${esc(p.dev)}</span>
+        <div class="cc-meta">${p.district?`<span class="status-pill sp-done">${esc(p.district)}</span>`:''}${p.zone?`<span class="status-pill sp-pre">${esc(p.zone)}</span>`:''}
         <span class="status-pill ${statusCls(p.status)}">${esc(p.status)}</span></div></div>
       ${vsRow}${soldBar}
       <div class="cc-chips">${kits}${baths}</div>${amRow}

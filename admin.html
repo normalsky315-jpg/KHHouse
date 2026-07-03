@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>儀表板管理後台</title>
+<title>KHHouse 管理後台（高雄重點行政區）</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -80,7 +80,7 @@ label{display:block;font-size:12px;color:var(--dim);letter-spacing:.06em;margin:
 <body>
 
 <div class="topbar">
-  <h1>儀表板管理後台</h1>
+  <h1>KHHouse 管理後台</h1>
   <span class="st" id="repoSt"></span>
   <span class="sp"></span>
   <button class="btn small" id="btnLogout" style="display:none;border-color:var(--gold-soft);color:var(--gold-soft);background:transparent" onclick="logout()">登出</button>
@@ -94,7 +94,7 @@ label{display:block;font-size:12px;color:var(--dim);letter-spacing:.06em;margin:
   <input type="password" id="inToken" placeholder="ghp_ 或 github_pat_ 開頭">
   <div class="row2">
     <div><label>帳號（owner）</label><input id="inOwner" value="normalsky315-jpg"></div>
-    <div><label>Repo 名稱</label><input id="inRepo" value="NKUinfos"></div>
+    <div><label>Repo 名稱</label><input id="inRepo" value="KHHouse"></div>
   </div>
   <div class="row2">
     <div><label>分支</label><input id="inBranch" value="main"></div>
@@ -106,7 +106,7 @@ label{display:block;font-size:12px;color:var(--dim);letter-spacing:.06em;margin:
     1. 登入 GitHub → 右上頭像 → <b>Settings</b><br>
     2. 左欄最底 <b>Developer settings</b> → <b>Personal access tokens → Fine-grained tokens</b> → <b>Generate new token</b><br>
     3. 名稱隨意（如 NKU後台）、Expiration 選 <b>90 days 或 custom 一年</b><br>
-    4. Repository access 選 <b>Only select repositories</b> → 勾 <b>NKUinfos</b><br>
+    4. Repository access 選 <b>Only select repositories</b> → 勾 <b>KHHouse</b><br>
     5. Permissions → Repository permissions → <b>Contents</b> 改成 <b>Read and write</b><br>
     6. 按 Generate，把 <code>github_pat_…</code> 整串複製貼到上面欄位<br>
     ※ Token 等同你的鑰匙，不要貼給任何人、不要存在共用電腦。
@@ -227,11 +227,11 @@ function moveProject(i,d){
   renderList();markDirty();
 }
 function addProject(){
-  DB.projects.push({name:'新建案',dev:'',status:'預售屋',addr:'',permit:'-',floor:'',
-    avgPrice:36,minPrice:0,maxPrice:0,count:0,units:0,layout:'',r1:0,r2:0,r3:0,r4:0,
-    loan:'80%',handover:'',kit:[],bath:[],other:[],amenities:{},notes:'',analysis:'',
+  DB.projects.push({name:'新建案',dev:'',status:'預售屋',addr:'',district:'',zone:'',permit:'',floor:'',
+    avgPrice:null,minPrice:null,maxPrice:null,count:null,askPrice:'',units:null,layout:'',r1:0,r2:0,r3:0,r4:0,
+    loan:'',handover:'',kit:[],bath:[],other:[],amenities:{},notes:'',analysis:'',
     vs:'',vsPublic:false,tagMode:'auto',tagManual:'normal',warn:false,warnReason:'',
-    lat:22.728,lng:120.283,s591:'',floorPlans:[]});
+    lat:null,lng:null,s591:'',sleju:'',s958:'',floorPlans:[]});
   cur=DB.projects.length-1;renderList();renderForm();markDirty();
 }
 function delProject(){
@@ -252,6 +252,7 @@ function renderForm(){
   $('editor').innerHTML=`
   <div class="sec"><div class="sec-h" onclick="tog(this)">基 本 資 料</div><div class="sec-b">
     <div class="row2">${fld('案名','name')}${fld('建商','dev')}</div>
+    <div class="row2">${fld('行政區（楠梓/仁武/左營…）','district')}${fld('生活圈（選填，如 八卦寮）','zone')}</div>
     <div class="row3">
       <div><label>狀態</label><select id="f_status"><option>預售屋</option><option>新成屋</option><option>成屋</option></select></div>
       ${fld('樓層（如 15F/B3）','floor')}${fld('交屋時間','handover')}
@@ -259,6 +260,7 @@ function renderForm(){
     ${fld('地址','addr')}
     <div class="row2">${fld('建造執照','permit')}${fld('貸款成數','loan')}</div>
     ${fld('591 連結','s591')}
+    <div class="row2">${fld('樂居連結','sleju')}${fld('house958 連結','s958')}</div>
     <div class="chk"><input type="checkbox" id="f_warn"><label style="margin:0">⚠ 警示標記</label></div>
     <div id="warnWrap">${fld('警示原因','warnReason')}</div>
   </div></div>
@@ -266,6 +268,7 @@ function renderForm(){
   <div class="sec"><div class="sec-h" onclick="tog(this)">價 格 與 成 交</div><div class="sec-b">
     <div class="row3">${fld('均價（萬/坪）','avgPrice','number','step="0.01"')}${fld('最低價','minPrice','number','step="0.01"')}${fld('最高價','maxPrice','number','step="0.01"')}</div>
     <div class="row2">${fld('成交筆數','count','number')}${fld('總戶數','units','number')}</div>
+    ${fld('開價（無實登價時前台顯示，例 33~36萬/坪）','askPrice')}
     <div class="row2">
       <div><label>定位標籤</label><select id="f_tagMode">
         <option value="auto">自動（依門檻計算）</option><option value="manual">手動指定</option></select></div>
@@ -304,7 +307,7 @@ function renderForm(){
     <div class="fp-pre" id="fpPre"></div>
   </div></div>
 
-  <div class="sec closed" id="pinSec"><div class="sec-h" onclick="tog(this);initPin()">位 置 編 輯（座標 ${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}）</div><div class="sec-b">
+  <div class="sec closed" id="pinSec"><div class="sec-h" onclick="tog(this);initPin()">位 置 編 輯（${p.lat!=null?`座標 ${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}`:'尚未設定座標'}）</div><div class="sec-b">
     <div style="font-size:13px;color:var(--dim)">拖曳圖釘到正確的<b>基地位置</b>（非接待中心），或貼 Google Maps 連結解析座標。</div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <input id="gmapsIn" placeholder="貼 Google Maps 網址（含 @22.7xx,120.2xx）">
@@ -316,7 +319,8 @@ function renderForm(){
 
   // 填值
   const set=(k,v)=>{const el=$('f_'+k);if(el)el.value=v??''};
-  ['name','dev','status','floor','handover','addr','permit','loan','s591','warnReason',
+  ['name','dev','status','floor','handover','addr','permit','loan','s591','sleju','s958','warnReason',
+   'district','zone','askPrice',
    'avgPrice','minPrice','maxPrice','count','units','tagMode','tagManual',
    'layout','r1','r2','r3','r4','vs','notes','analysis','lat','lng'].forEach(k=>set(k,p[k]));
   $('f_warn').checked=!!p.warn; $('f_vsPublic').checked=!!p.vsPublic;
@@ -339,7 +343,7 @@ function renderForm(){
           const m=line.split(/[:：]/);if(m.length>=2&&m[0].trim()){o[m[0].trim()]=m.slice(1).join(':').split(/[、,，]/).map(s=>s.trim()).filter(Boolean)}});
         p.amenities=o;
       }
-      else if(num.includes(k)){p[k]=parseFloat(el.value)||0}
+      else if(num.includes(k)){p[k]=el.value===''?null:(parseFloat(el.value)||0)}
       else{p[k]=el.value}
       if(k==='name')renderList();
       if(k==='lat'||k==='lng')syncPin();
@@ -351,9 +355,13 @@ function renderForm(){
 function tog(h){h.parentElement.classList.toggle('closed')}
 function updTagPreview(){
   const p=DB.projects[cur],S=DB.settings;
-  const pct=(p.avgPrice-S.base)/S.base*100;
+  const base=(S.districtBase&&S.districtBase[p.district])||S.base;
+  if(typeof p.avgPrice!=='number'||p.avgPrice<=0){
+    $('tagPreview').textContent='尚無實登均價 → 前台顯示「開價＋新案」標示';return;
+  }
+  const pct=(p.avgPrice-base)/base*100;
   const auto=pct>=S.premiumPct?'溢價':pct<=S.discountPct?'折價':'均值';
-  $('tagPreview').textContent=`目前 vs 基準 ${(pct>=0?'+':'')+pct.toFixed(1)}% → 自動判定：${auto}${p.tagMode==='manual'?'（手動覆寫中）':''}`;
+  $('tagPreview').textContent=`目前 vs ${p.district||'全域'}基準 ${base.toFixed(2)}：${(pct>=0?'+':'')+pct.toFixed(1)}% → 自動判定：${auto}${p.tagMode==='manual'?'（手動覆寫中）':''}`;
 }
 
 /* ── 平面圖 ── */
@@ -385,10 +393,11 @@ function initPin(){
   $('pinMap').style.display='block';
   setTimeout(()=>{
     const p=DB.projects[cur];
+    const lat=p.lat??22.687, lng=p.lng??120.334;  // 未設定時先落在仁武一帶
     if(!pinMap){
-      pinMap=L.map('pinMap').setView([p.lat,p.lng],16);
+      pinMap=L.map('pinMap').setView([lat,lng],15);
       L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{subdomains:['0','1','2','3'],maxZoom:20,attribution:'&copy; Google'}).addTo(pinMap);
-      pinMarker=L.marker([p.lat,p.lng],{draggable:true}).addTo(pinMap);
+      pinMarker=L.marker([lat,lng],{draggable:true}).addTo(pinMap);
       pinMarker.on('dragend',()=>{
         const ll=pinMarker.getLatLng();
         const q=DB.projects[cur];
@@ -398,8 +407,8 @@ function initPin(){
       });
     }
     pinMap.invalidateSize();
-    pinMap.setView([p.lat,p.lng],16);
-    pinMarker.setLatLng([p.lat,p.lng]);
+    pinMap.setView([lat,lng],15);
+    pinMarker.setLatLng([lat,lng]);
   },60);
 }
 function syncPin(){
