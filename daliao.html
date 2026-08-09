@@ -477,9 +477,7 @@ function openModal(i){
     <div class="analysis-box"><span class="al">分 析 觀 點</span>${esc(p.analysis)}</div>
     ${fpHtml}
     <div class="link-row">
-      ${p.s591?`<a class="link-btn" href="${esc(p.s591)}" target="_blank">591 詳情 ↗</a>`:''}
       ${(p.leju||p.sleju)?`<a class="link-btn" href="${esc(p.leju||p.sleju)}" target="_blank">樂居 ↗</a>`:''}
-      ${p.s958?`<a class="link-btn" href="${esc(p.s958)}" target="_blank">house958 ↗</a>`:''}
       ${p.lat!=null?`<a class="link-btn" href="https://www.google.com/maps/?q=${p.lat},${p.lng}" target="_blank">Google Map ↗</a>`:''}</div>`;
   document.getElementById('overlay').classList.add('open');
   if(mapObj&&p.lat!=null) mapObj.setView([p.lat,p.lng],17,{animate:true});
