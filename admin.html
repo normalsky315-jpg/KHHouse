@@ -248,6 +248,7 @@ function addProject(){
   DB.projects.push({name:'新建案',dev:'',status:'預售屋',addr:'',district:'',zone:'',permit:'',floor:'',
     avgPrice:null,minPrice:null,maxPrice:null,count:null,askPrice:'',units:null,layout:'',r1:0,r2:0,r3:0,r4:0,
     loan:'',handover:'',kit:[],bath:[],other:[],amenities:{},notes:'',analysis:'',
+    coverage:'',mgmtFee:'',parkingClean:'',supplement:'',
     vs:'',vsPublic:false,tagMode:'auto',tagManual:'normal',warn:false,warnReason:'',
     lat:null,lng:null,s591:'',sleju:'',s958:'',floorPlans:[]});
   cur=DB.projects.length-1;renderList();renderForm();markDirty();
@@ -301,6 +302,10 @@ function renderForm(){
     <div class="row4">${fld('1房 %','r1','number')}${fld('2房 %','r2','number')}${fld('3房 %','r3','number')}${fld('4房 %','r4','number')}</div>
   </div></div>
 
+  <div class="sec closed"><div class="sec-h" onclick="tog(this)">社 區 費 用</div><div class="sec-b">
+    <div class="row3">${fld('公設比（例 28.6%）','coverage')}${fld('管理費（例 65元/坪/月）','mgmtFee')}${fld('汽車清潔費（例 300元/月）','parkingClean')}</div>
+  </div></div>
+
   <div class="sec closed"><div class="sec-h" onclick="tog(this)">建 材 與 配 備</div><div class="sec-b">
     <label>廚具（每行一項）</label><textarea id="f_kit"></textarea>
     <label>衛浴（每行一項）</label><textarea id="f_bath"></textarea>
@@ -317,6 +322,7 @@ function renderForm(){
     <div class="chk"><input type="checkbox" id="f_vsPublic"><label style="margin:0">公開顯示（取消勾選＝只有內部版看得到）</label></div>
     <label>注意事項</label><textarea id="f_notes"></textarea>
     <label>分析觀點</label><textarea id="f_analysis"></textarea>
+    <label>補充資料（自由填寫，前台會顯示在詳情頁）</label><textarea id="f_supplement" style="min-height:90px"></textarea>
   </div></div>
 
   <div class="sec closed"><div class="sec-h" onclick="tog(this)">平 面 圖（${(p.floorPlans||[]).length} 張）</div><div class="sec-b">
@@ -340,7 +346,8 @@ function renderForm(){
   ['name','dev','status','floor','handover','addr','permit','loan','s591','sleju','s958','warnReason',
    'district','zone','askPrice',
    'avgPrice','minPrice','maxPrice','count','units','tagMode','tagManual',
-   'layout','r1','r2','r3','r4','vs','notes','analysis','lat','lng'].forEach(k=>set(k,p[k]));
+   'layout','r1','r2','r3','r4','vs','notes','analysis','lat','lng',
+   'coverage','mgmtFee','parkingClean','supplement'].forEach(k=>set(k,p[k]));
   $('f_warn').checked=!!p.warn; $('f_vsPublic').checked=!!p.vsPublic;
   $('f_kit').value=(p.kit||[]).join('\n');
   $('f_bath').value=(p.bath||[]).join('\n');
