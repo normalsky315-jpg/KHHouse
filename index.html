@@ -478,6 +478,14 @@ function openModal(i){
       <div class="info-cell full"><div class="ic-label">格局規劃</div><div class="ic-val">${esc(p.layout)}</div></div>
       ${(p.r1||p.r2||p.r3||p.r4)?`<div class="info-cell full"><div class="ic-label">房型比例</div><div class="ic-val" style="display:flex;align-items:center;gap:12px">${donut}
         <div style="font-size:13px;color:var(--dim);line-height:1.8">${p.r2?`2房 ${p.r2}%　`:''}${p.r3?`3房 ${p.r3}%　`:''}${p.r4?`4房 ${p.r4}%`:''}</div></div></div>`:''}
+      ${p.coverage?`<div class="info-cell"><div class="ic-label">公設比</div><div class="ic-val">${esc(p.coverage)}</div></div>`:''}
+      ${p.mgmtFee?`<div class="info-cell"><div class="ic-label">管理費</div><div class="ic-val">${esc(p.mgmtFee)}</div></div>`:''}
+      ${p.parkingClean?`<div class="info-cell"><div class="ic-label">汽車清潔費</div><div class="ic-val">${esc(p.parkingClean)}</div></div>`:''}
+      ${p.landPrice?`<div class="info-cell"><div class="ic-label">土地價格</div><div class="ic-val">${esc(p.landPrice)}</div></div>`:''}
+      ${p.launchDate?`<div class="info-cell"><div class="ic-label">進場時間</div><div class="ic-val">${esc(p.launchDate)}</div></div>`:''}
+      ${p.parkingPrice?`<div class="info-cell full"><div class="ic-label">車位開價</div><div class="ic-val">${esc(p.parkingPrice)}</div></div>`:''}
+      ${p.parkingSize?`<div class="info-cell"><div class="ic-label">車位持分</div><div class="ic-val">${esc(p.parkingSize)}</div></div>`:''}
+      ${p.collectFee?`<div class="info-cell"><div class="ic-label">代收款</div><div class="ic-val">${esc(p.collectFee)}</div></div>`:''}
     </div>
     <div class="msec-title">廚 衛 建 材</div>
     <div class="mat-list">

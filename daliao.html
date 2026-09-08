@@ -94,9 +94,8 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 .mpill:hover{transform:scale(1.08);z-index:9999}
 .mpill .pn{font-size:12px;font-weight:700;line-height:1.3;font-family:var(--sans)}
 .mpill .pp{font-size:11px;opacity:.9;line-height:1.3}
-.mpill.premium{background:var(--red);color:#fff}
 .mpill.normal{background:var(--ink);color:#F2EDE0}
-.mpill.discount{background:var(--green);color:#fff}
+.mpill.new{background:var(--green);color:#fff}
 .mpill.presale{background:#FFFDF7;color:var(--ink);border:1.5px dashed var(--ink)}
 .mpill.warn{background:var(--amber);color:#fff}
 
@@ -105,9 +104,9 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 .case-card{background:var(--paper);border:1px solid var(--line);cursor:pointer;display:flex;flex-direction:column;transition:box-shadow .16s,transform .16s;position:relative}
 .case-card:hover{box-shadow:0 10px 28px rgba(15,36,31,.14);transform:translateY(-2px)}
 .case-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
-.case-card.premium::before{background:var(--red)}
+.case-card.presale::before{background:var(--amber)}
 .case-card.normal::before{background:var(--ink)}
-.case-card.discount::before{background:var(--green)}
+.case-card.new::before{background:var(--green)}
 .case-card.warn::before{background:repeating-linear-gradient(90deg,var(--amber) 0 14px,transparent 14px 22px)}
 .cc-head{padding:16px 18px 11px;border-bottom:1px solid var(--line)}
 .cc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -236,17 +235,11 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
   </div>
 </div>
 
-<div class="kpis"><div class="kpis-in" id="kpiRow"></div></div>
-
 <div style="max-width:1560px;margin:0 auto">
   <div class="toolbar">
     <button class="vbtn active" id="btnList" onclick="setView('list')">卡 片</button>
     <button class="vbtn" id="btnMap" onclick="setView('map')">地 圖</button>
     <input class="search-inp" id="searchInput" placeholder="搜尋案名、建商、建材…">
-    <select class="fil" id="tagFilter">
-      <option value="all">全部定位</option><option value="premium">溢價</option>
-      <option value="normal">均值</option><option value="discount">折價</option>
-    </select>
     <select class="fil" id="statusFilter">
       <option value="all">全部狀態</option><option value="預售">預售屋</option>
       <option value="新成屋">新成屋</option><option value="成屋">成屋</option>
@@ -263,7 +256,7 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
   <div id="mapView">
     <div class="map-head">
       <h2>地圖分布 · 案名＋均價</h2>
-      <span class="mleg">■ 紅＝溢價　■ 墨綠＝均值　■ 綠＝折價　⬚ 虛框＝預售　■ 土金＝警示</span>
+      <span class="mleg">■ 墨綠＝新成屋/成屋　⬚ 虛框＝預售　■ 土金＝警示</span>
     </div>
     <div id="theMap"></div>
   </div>
@@ -302,54 +295,36 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 const PAGE_DISTRICT='大寮', PAGE_TITLE='大寮區建案儀表板';
 let DB=null, projects=[], S=null, curDist=PAGE_DISTRICT;
 const scoped=()=>projects;
-const distBase=()=>(S.districtBase&&S.districtBase[PAGE_DISTRICT])||S.base;
 
-const baseOf=p=>(S.districtBase&&S.districtBase[p.district])||S.base;
 const hasPrice=p=>typeof p.avgPrice==='number'&&p.avgPrice>0;
-function tagOf(p){
-  if(p.tagMode==='manual') return p.tagManual||'normal';
-  if(!hasPrice(p)) return 'normal';
-  const pct=(p.avgPrice-baseOf(p))/baseOf(p)*100;
-  return pct>=S.premiumPct?'premium':pct<=S.discountPct?'discount':'normal';
-}
-const pctOf=p=>hasPrice(p)?(p.avgPrice-baseOf(p))/baseOf(p)*100:null;
 function getSold(p){
   if(!p.units||p.count==null) return null;
   return {pct:Math.min(Math.round(p.count/p.units*100),100), text:`實登 ${p.count} / ${p.units} 戶`};
 }
-const soldColor=t=>t==='premium'?'red':t==='discount'?'green':'amber';
-const tagLabel=t=>t==='premium'?'溢價':t==='discount'?'折價':'均值';
-const tagCls=t=>t==='premium'?'tb-red':t==='discount'?'tb-green':'tb-amber';
+const soldColor=pct=>pct>=50?'green':pct>=20?'amber':'red';
 const statusCls=s=>s.includes('預售')?'sp-pre':s.includes('新成')?'sp-new':'sp-done';
+const statusAccent=s=>s.includes('預售')?'presale':s.includes('新成')?'new':'normal';
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-/* ── 頁首與 KPI：全部由資料即時計算 ── */
+/* ── 頁首：全部由資料即時計算（不含溢價/折價門檻） ── */
 function renderHeader(){
   document.getElementById('hTitle').textContent=PAGE_TITLE;
   document.getElementById('hSub').textContent=`${S.subtitle} · ${S.version} · 資料 ${S.dataDate}`;
   document.title=PAGE_TITLE;
-  const sp=scoped(), base=distBase();
+  const sp=scoped();
   document.getElementById('mastStats').innerHTML=`
     <div class="mstat"><div class="l">行政區</div><div class="v" style="font-size:24px">${esc(PAGE_DISTRICT)}</div><div class="s">DISTRICT</div></div>
-    <div class="mstat"><div class="l">案數</div><div class="v">${sp.length}</div><div class="s">CASES</div></div>
-    <div class="mstat"><div class="l">區域基準</div><div class="v">${base.toFixed(2)}<small>萬/坪</small></div><div class="s">BASELINE</div></div>`;
-
-  const thHi=base*(1+S.premiumPct/100), thLo=base*(1+S.discountPct/100);
-  document.getElementById('kpiRow').innerHTML=`
-    <div class="kpi"><div class="l">溢價門檻 +${S.premiumPct}%</div><div class="v red">${thHi.toFixed(2)}</div><div class="s">≥ 此為紅標</div></div>
-    <div class="kpi"><div class="l">折價門檻 ${S.discountPct}%</div><div class="v green">${thLo.toFixed(2)}</div><div class="s">≤ 此為綠標</div></div>`;
+    <div class="mstat"><div class="l">案數</div><div class="v">${sp.length}</div><div class="s">CASES</div></div>`;
   document.getElementById('footer').innerHTML=`${PAGE_TITLE} · ${S.subtitle} · ${S.version}<a href="./index.html">← 回全區總覽</a>`;
 }
 
 /* ── 卡片 ── */
 function renderCards(){
   const search=document.getElementById('searchInput').value.toLowerCase();
-  const tag=document.getElementById('tagFilter').value;
   const stat=document.getElementById('statusFilter').value;
   const sort=document.getElementById('sortSelect').value;
-  let data=projects.map((p,i)=>({...p,idx:i,tag:tagOf(p),pct:pctOf(p),sold:getSold(p)}));
+  let data=projects.map((p,i)=>({...p,idx:i,sold:getSold(p)}));
   if(search) data=data.filter(p=>[p.name,p.dev,p.addr,p.district,p.zone,...(p.kit||[]),...(p.bath||[]),...(p.other||[])].join(' ').toLowerCase().includes(search));
-  if(tag!=='all') data=data.filter(p=>p.tag===tag);
   if(stat!=='all') data=data.filter(p=>p.status.includes(stat));
   if(sort==='price_desc') data.sort((a,b)=>(b.avgPrice??-1)-(a.avgPrice??-1));
   else if(sort==='price_asc') data.sort((a,b)=>(a.avgPrice??1e9)-(b.avgPrice??1e9));
@@ -358,33 +333,29 @@ function renderCards(){
   document.getElementById('tblCt').textContent=`${data.length} / ${scoped().length} 案`;
 
   document.getElementById('listView').innerHTML=data.map(p=>{
-    const hasP=p.pct!=null;
-    const barW=hasP?Math.min(Math.abs(p.pct)/25*100,100):0;
-    const prCls=hasP?(p.pct>=S.premiumPct?'red':p.pct<=S.discountPct?'green':'amber'):'amber';
+    const hasP=hasPrice(p);
+    const accent=statusAccent(p.status);
     const kits=(p.kit||[]).slice(0,2).map(k=>`<span class="chip k">${esc(k.substring(0,20))}</span>`).join('');
     const baths=(p.bath||[]).slice(0,1).map(b=>`<span class="chip b">${esc(b.substring(0,18))}</span>`).join('');
     const allAm=p.amenities?Object.values(p.amenities).flat():[];
     const amRow=allAm.length?`<div class="cc-amenities">${allAm.slice(0,4).map(a=>`<span class="chip am">${esc(a)}</span>`).join('')}${allAm.length>4?`<span class="chip am-more">+${allAm.length-4}</span>`:''}</div>`:'';
     const vsRow=(p.vs&&p.vsPublic)?`<div class="cc-vs">${esc(p.vs)}</div>`:'';
+    const sc=p.sold?soldColor(p.sold.pct):'amber';
     const soldBar=p.sold?`<div class="cc-sold">
-      <div class="sold-label"><span class="sold-l">售出率（實登/總戶）</span>
-      <span class="sold-pct" style="color:var(--${soldColor(p.tag)==='amber'?'amber':soldColor(p.tag)})">${p.sold.pct}%</span></div>
-      <div class="sold-bar"><div class="sold-fill ${soldColor(p.tag)}" style="width:${p.sold.pct}%"></div></div>
+      <div class="sold-label"><span class="sold-l">銷售進度（實登/總戶）</span>
+      <span class="sold-pct" style="color:var(--${sc})">${p.sold.pct}%</span></div>
+      <div class="sold-bar"><div class="sold-fill ${sc}" style="width:${p.sold.pct}%"></div></div>
       <div class="sold-sub">${p.sold.text}</div></div>`:'';
-    return `<div class="case-card ${p.tag}${p.warn?' warn':''}" onclick="openModal(${p.idx})">
+    return `<div class="case-card ${accent}${p.warn?' warn':''}" onclick="openModal(${p.idx})">
       <div class="cc-head">${p.dev?`<div class="cc-devtop">${esc(p.dev)}</div>`:''}<div class="cc-top">
         <div class="cc-name">${esc(p.name)}${p.warn?' ⚠':''}</div>
-        <div class="cc-price ${prCls}"${hasP?'':' style="font-size:17px"'}>${hasP?p.avgPrice.toFixed(2)+'<small> 萬</small>':(p.askPrice?esc(p.askPrice)+'<small> 開價</small>':'待定')}</div></div>
+        <div class="cc-price"${hasP?'':' style="font-size:17px;color:var(--amber)"'}>${hasP?p.avgPrice.toFixed(2)+'<small> 萬</small>':(p.askPrice?esc(p.askPrice)+'<small> 開價</small>':'待定')}</div></div>
         <div class="cc-meta">${p.district?`<span class="status-pill sp-done">${esc(p.district)}</span>`:''}${p.zone?`<span class="status-pill sp-pre">${esc(p.zone)}</span>`:''}
         <span class="status-pill ${statusCls(p.status)}">${esc(p.status)}</span></div></div>
       ${vsRow}${soldBar}
       <div class="cc-chips">${kits}${baths}</div>${amRow}
-      ${hasP?`<div class="cc-foot">
-        <div class="vs-track"><div class="vs-center"></div><div class="vs-fill ${p.pct>=0?'vs-pos':'vs-neg'}" style="width:${barW/2}%"></div></div>
-        <span class="vs-pct ${p.pct>=0?'up':'dn'}">${(p.pct>=0?'+':'')+p.pct.toFixed(1)}%</span>
-        <span class="tag-badge ${tagCls(p.tag)}">${tagLabel(p.tag)}</span></div>`:`<div class="cc-foot">
-        <span style="font-size:12.5px;color:var(--mute)">尚無實價登錄</span>
-        <span class="tag-badge tb-amber" style="margin-left:auto">新 案</span></div>`}</div>`;
+      ${!p.sold?`<div class="cc-foot">
+        <span style="font-size:12.5px;color:var(--mute)">${hasP?'尚無銷售進度資料':'尚無實價登錄'}</span></div>`:''}</div>`;
   }).join('');
 }
 
@@ -403,21 +374,19 @@ function buildMarkers(){
   mapMarkers=[];
   projects.forEach((p,i)=>{
     if(p.lat==null||p.lng==null) return;
-    const t=tagOf(p), pct=pctOf(p);
-    let cls=p.status.includes('預售')?'presale':(t==='premium'?'premium':t==='discount'?'discount':'normal');
+    let cls=p.status.includes('預售')?'presale':(p.status.includes('新成')?'new':'normal');
     if(p.warn) cls='warn';
     const ic=L.divIcon({className:'',html:`<div class="mpill ${cls}"><span class="pn">${esc(p.name)}</span><span class="pp">${hasPrice(p)?p.avgPrice.toFixed(2)+' 萬':'待定'}</span></div>`,iconSize:[null,null],iconAnchor:[0,30]});
     const m=L.marker([p.lat,p.lng],{icon:ic}).addTo(mapObj);
-    const pc=t==='premium'?'var(--red)':t==='discount'?'var(--green)':'var(--amber)';
+    const pc='var(--ink)';
     const sold=getSold(p);
     m.bindPopup(`<div class="mpopup">
-      <div class="mpopup-tag" style="color:${pc}">${t==='premium'?'▲ 溢價':t==='discount'?'▼ 折價':'● 均值'} · ${esc(p.status)}</div>
+      <div class="mpopup-tag" style="color:${pc}">● ${esc(p.status)}</div>
       <h3>${esc(p.name)}</h3>
       <div class="mprice" style="color:${pc}">${hasPrice(p)?p.avgPrice.toFixed(2)+' 萬/坪':(p.askPrice?'開價 '+esc(p.askPrice):'價格待定')}</div>
-      ${pct!=null?`<div class="mdelta" style="color:${pc}">${(pct>=0?'+':'')+pct.toFixed(1)}% vs 基準</div>`:''}
       <div class="mrow"><span>建商</span><span>${esc(p.dev)}</span></div>
       <div class="mrow"><span>戶數</span><span>${p.units} 戶</span></div>
-      ${sold?`<div class="mrow"><span>售出率</span><span style="color:${pc}">${sold.pct}%</span></div>`:''}
+      ${sold?`<div class="mrow"><span>銷售進度</span><span style="color:${pc}">${sold.pct}%</span></div>`:''}
       <button class="dbtn" onclick="closePopups();openModal(${i})">查看完整詳情 →</button></div>`,{maxWidth:236});
     mapMarkers.push(m);
   });
@@ -434,10 +403,9 @@ function setView(v){
 
 /* ── 詳情 ── */
 function openModal(i){
-  const p=projects[i], t=tagOf(p), pct=pctOf(p);
-  const pctStr=pct!=null?(pct>=0?'+':'')+pct.toFixed(1)+'%':'';
-  const pc=t==='premium'?'var(--red)':t==='discount'?'var(--green)':'var(--gold)';
-  document.getElementById('modalTag').innerHTML=pct!=null?`<span class="tag-badge ${tagCls(t)}" style="font-size:13px">${tagLabel(t)} ${pctStr}</span>`:`<span class="tag-badge tb-amber" style="font-size:13px">新案 · 尚無實登</span>`;
+  const p=projects[i];
+  const pc='var(--gold)';
+  document.getElementById('modalTag').innerHTML=`<span class="tag-badge ${statusCls(p.status)==='sp-pre'?'tb-amber':statusCls(p.status)==='sp-new'?'tb-green':'tb-amber'}" style="font-size:13px">${esc(p.status)}</span>`;
   document.getElementById('modalTitle').textContent=p.name+(p.warn?' ⚠':'');
   document.getElementById('modalDev').textContent=`${p.district?p.district+' · ':''}${p.dev} · ${p.status} · 交屋：${p.handover||'—'}`;
   const sold=getSold(p);
@@ -475,7 +443,12 @@ function openModal(i){
         <div style="font-size:13px;color:var(--dim);line-height:1.8">${p.r2?`2房 ${p.r2}%　`:''}${p.r3?`3房 ${p.r3}%　`:''}${p.r4?`4房 ${p.r4}%`:''}</div></div></div>`:''}
       ${p.coverage?`<div class="info-cell"><div class="ic-label">公設比</div><div class="ic-val">${esc(p.coverage)}</div></div>`:''}
       ${p.mgmtFee?`<div class="info-cell"><div class="ic-label">管理費</div><div class="ic-val">${esc(p.mgmtFee)}</div></div>`:''}
-      ${p.parkingClean?`<div class="info-cell full"><div class="ic-label">汽車清潔費</div><div class="ic-val">${esc(p.parkingClean)}</div></div>`:''}
+      ${p.parkingClean?`<div class="info-cell"><div class="ic-label">汽車清潔費</div><div class="ic-val">${esc(p.parkingClean)}</div></div>`:''}
+      ${p.landPrice?`<div class="info-cell"><div class="ic-label">土地價格</div><div class="ic-val">${esc(p.landPrice)}</div></div>`:''}
+      ${p.launchDate?`<div class="info-cell"><div class="ic-label">進場時間</div><div class="ic-val">${esc(p.launchDate)}</div></div>`:''}
+      ${p.parkingPrice?`<div class="info-cell full"><div class="ic-label">車位開價</div><div class="ic-val">${esc(p.parkingPrice)}</div></div>`:''}
+      ${p.parkingSize?`<div class="info-cell"><div class="ic-label">車位持分</div><div class="ic-val">${esc(p.parkingSize)}</div></div>`:''}
+      ${p.collectFee?`<div class="info-cell"><div class="ic-label">代收款</div><div class="ic-val">${esc(p.collectFee)}</div></div>`:''}
     </div>
     <div class="msec-title">廚 衛 建 材</div>
     <div class="mat-list">
@@ -543,7 +516,7 @@ async function boot(){
   S=DB.settings;
   projects=DB.projects.filter(p=>p.district===PAGE_DISTRICT);
   renderHeader(); renderCards();
-  ['searchInput','tagFilter','statusFilter','sortSelect'].forEach(id=>{
+  ['searchInput','statusFilter','sortSelect'].forEach(id=>{
     document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',renderCards);
   });
   setView('list');
