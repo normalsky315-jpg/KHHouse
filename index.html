@@ -193,6 +193,12 @@ select.fil{padding:9px 12px;border:1px solid var(--line);border-bottom:2px solid
 .ic-label{font-size:11px;color:var(--mute);letter-spacing:.14em;margin-bottom:3px;font-family:var(--mono)}
 .ic-val{font-size:15px;font-weight:500}
 .mat-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.deal-wrap{max-height:320px;overflow-y:auto;border:1px solid var(--line);margin-top:8px}
+.deal-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.deal-table th{position:sticky;top:0;background:var(--paper2);color:var(--dim);font-weight:600;font-size:11px;letter-spacing:.06em;padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.deal-table td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--mono)}
+.deal-table tr:last-child td{border-bottom:none}
+.deal-table td.tl{font-family:var(--sans);white-space:normal}
 .notes-box{background:var(--amber-bg);border-left:3px solid var(--gold);padding:12px 16px;font-size:14px;color:var(--dim);line-height:1.7;margin-top:14px}
 .analysis-box{background:#F0F4F1;border-left:3px solid var(--ink);padding:12px 16px;font-size:15px;line-height:1.7;margin-top:12px}
 .analysis-box .al{font-family:var(--serif);font-size:12px;color:var(--ink);letter-spacing:.22em;font-weight:700;margin-bottom:5px;display:block}
@@ -460,14 +466,23 @@ function openModal(i){
     <div class="msec-title">平 面 圖</div>
     <div class="fp-count">共 ${p.floorPlans.length} 張 · 點擊放大</div>
     <div class="fp-grid">${p.floorPlans.map((u,fi)=>`<img class="fp-thumb" src="${esc(u)}" loading="lazy" onclick="openLB(${i},${fi})" onerror="this.style.display='none'">`).join('')}</div>`:'';
+  const dealsHtml=(p.transactions&&p.transactions.length)?`
+    <div class="msec-title">實 價 登 錄 明 細（${p.transactions.length} 筆）</div>
+    <div class="deal-wrap"><table class="deal-table"><thead><tr>
+      <th>交易日期</th><th>棟別</th><th class="tl">格局</th><th>樓層</th><th>面積(坪)</th><th>單價(萬/坪)</th><th>總價(萬)</th><th>車位(萬)</th>
+    </tr></thead><tbody>${p.transactions.map(t=>`<tr>
+      <td>${esc(t.date)}</td><td>${esc(t.building)}</td><td class="tl">${esc(t.layout)}</td><td>${esc(t.floor)}</td>
+      <td>${t.area??'—'}</td><td>${t.unitPrice??'—'}</td><td>${t.totalPrice??'—'}</td><td>${t.parkingPrice??'—'}</td>
+    </tr>`).join('')}</tbody></table></div>`:'';
   document.getElementById('modalBody').innerHTML=`
     <div class="price-hero">
       ${hasPrice(p)?`<span class="ph-num" style="color:${pc}">${p.avgPrice.toFixed(2)}</span>
       <span class="ph-unit">萬/坪</span>
-      <span style="font-size:14px;font-family:var(--mono);color:var(--dim)">${p.minPrice} ~ ${p.maxPrice}${p.count!=null?` · ${p.count} 筆成交`:''}</span>`
+      <span style="font-size:14px;font-family:var(--mono);color:var(--dim)">${(p.minPrice!=null&&p.maxPrice!=null)?`${p.minPrice} ~ ${p.maxPrice} 萬/坪`:''}${p.count!=null?` · ${p.count} 筆成交`:''}${(p.totalMin!=null&&p.totalMax!=null)?` · 總價 ${p.totalMin}~${p.totalMax}萬`:''}</span>`
       :`<span class="ph-num" style="color:var(--amber);font-size:34px">${p.askPrice?esc(p.askPrice):'價格待定'}</span>
       <span class="ph-unit">${p.askPrice?'開價（實價登錄待累積）':''}</span>`}</div>
-    ${hasPrice(p)?`<div class="notes-box" style="margin-top:0">📊 依內政部不動產交易實價查詢服務網，近兩年真實成交紀錄共 <b>${p.count??'—'}</b> 筆整理而成（非店頭開價）。</div>`:''}
+    ${hasPrice(p)?`<div class="notes-box" style="margin-top:0">📊 依內政部不動產交易實價查詢服務網，${p.dataPeriod?esc(p.dataPeriod):'近兩年'}真實成交紀錄共 <b>${p.count??'—'}</b> 筆整理而成（非店頭開價）。</div>`:''}
+    ${dealsHtml}
     ${(p.vs&&p.vs.trim())?`<div class="vs-box"><span class="al">對戰觀點${p.vsPublic?'':'（內部）'}</span>${esc(p.vs)}</div>`:''}
     <div class="msec-title">建 案 資 訊</div>
     <div class="info-grid">

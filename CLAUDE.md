@@ -27,8 +27,33 @@ notes, analysis, vs, vsPublic, tagMode, tagManual, warn, warnReason,
 lat, lng, s591, s958, sleju, floorPlans,
 coverage, mgmtFee, parkingClean, supplement,
 landPrice, launchDate, parkingPrice, parkingSize, collectFee,
-totalMin, totalMax   ← 2026-09-09 補上,admin.html 對應在「價格與成交」區塊
+totalMin, totalMax,  ← 2026-09-09 補上,admin.html 對應在「價格與成交」區塊
+dataPeriod, transactions  ← 2026-09-09 補上,見下方「實價登錄明細」說明
 ```
+
+### `transactions`(實價登錄明細,2026-09-09 新增)
+
+從內政部不動產交易實價查詢服務網匯出的 Excel(使用者提供)逐筆匯入的原始交易紀錄,陣列，
+每筆結構：
+```js
+{date, building, totalPrice, unitPrice, area, mainRatio, type, floor, subject,
+ layout, parkingPrice, usage, material, note}
+```
+`unitPrice`/`totalPrice`/`area`/`parkingPrice` 原始檔裡全部是文字字串（含全形空白），
+且透天厝類型的單價常是字面 `"0"`（政府登錄沒算單價，不是真的 0 元）——匯入時一定要把
+字串轉數字、並把 `0`/空字串當成 `null`，不能直接拿去算均價，否則均價會被拉低。
+
+`index.html`/`daliao.html` 的 modal 都會渲染一張「實價登錄明細」表格（`.deal-table`，
+sticky 表頭、可捲動），只在 `p.transactions.length` 為真時才顯示。**這個欄位目前沒有
+admin.html 編輯 UI**——是刻意的，因為每筆有 14 個子欄位，不適合手動編輯，屬於「重新匯入
+政府資料時整批覆蓋」的欄位，不是後台逐筆維護的欄位。之後如果要匯入其他行政區的實價登錄
+Excel，同一套解析/清理邏輯（見這次的 `count`/`avgPrice`/`minPrice`/`maxPrice`/
+`totalMin`/`totalMax`/`dataPeriod`/`transactions` 一起更新）可以照搬。
+
+`dataPeriod`：字串欄位，說明這筆 count/avgPrice 是用哪個時間區間算出來的（例如
+`"114年8月至115年8月"`）。前台 modal 的「📊 依內政部...」那句話會優先用這個欄位，沒有
+才 fallback 顯示「近兩年」——**填了 dataPeriod 就代表這筆的統計數字全部是用這個區間重算
+的，不是「近兩年」**，兩者不能同時代表同一組數字，改一定要一起改。
 
 ## 已知 bug / 已修過的坑
 
@@ -61,6 +86,21 @@ totalMin, totalMax   ← 2026-09-09 補上,admin.html 對應在「價格與成�
    同一建商「豐鉅開發建築」在大寮的其他案子(如「豐鉅二三」)。使用者已確認「先跳過」
    (2026-09-09)。之後若使用者再提到這個案名,先確認是否已經拿到正確連結或案名,不要
    直接照搬歷史資料。
+7. **使用者上傳的實價登錄 Excel 是「預售屋」限定的匯出(標題會寫「預售屋案件：高雄市
+   ○○區…」)**，不包含新成屋/成屋案子（例如松藝家、觀悦行館NO.18 這類已經是「新成屋」
+   狀態的案子，即使實際上真的有成交，也不會出現在這種預售屋匯出檔裡）。所以「檔案裡沒有
+   這個案名」不能直接當成「這個案子沒有實價登錄資料」——先看 status 是不是新成屋/成屋，
+   是的話這份檔案本來就不會收錄，不用當異常處理。
+8. **2026-09-09 這次匯入時，使用者選擇「直接用新檔案重算」**，把 count/avgPrice/
+   minPrice/maxPrice/totalMin/totalMax 全部改成只算檔案涵蓋的期間（114年8月至115年8月），
+   取代原本「近兩年」的舊統計。這讓幾個案子的筆數大幅下降（例：基茂樂go 45→1、旺春豐2期
+   11→1、心天母2 18→6、馥鈺 8→1、霖居NO.2 13→3、自由式 9→2），原因是這些案子的預售
+   交易大多發生在新檔案涵蓋期間「之前」，不是資料遺失或算錯——這是使用者知情且要求的
+   結果，不要看到筆數變小就以為是 bug 想要「校正」回舊值。
+9. **匯入的檔案裡有些建案名稱不在既有清單裡**（這次是「捷安居6期」7筆、「上學境二期」
+   1筆、「皇家水晶晶六期/七期-旺春豐3期」3筆），使用者選擇「先跳過，只處理清單內的案子」
+   （2026-09-09）。這些交易目前完全沒有寫進 data.json。之後如果要新增這些案子，要當成
+   全新建案處理（补地址/建商/狀態等基本資料），不能只塞 transactions 陣列就結案。
 
 ## 分區頁維護
 
