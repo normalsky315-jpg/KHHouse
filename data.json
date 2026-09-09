@@ -4188,7 +4188,10 @@
     "img/大寮/大橘新加坡5/B1F.jpg"
    ],
    "totalMin": 880,
-   "totalMax": 1068
+   "totalMax": 1068,
+   "coverage": "30",
+   "parkingClean": "",
+   "mgmtFee": "80"
   },
   {
    "name": "上學境",
