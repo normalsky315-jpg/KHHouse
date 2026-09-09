@@ -250,6 +250,7 @@ function addProject(){
     loan:'',handover:'',kit:[],bath:[],other:[],amenities:{},notes:'',analysis:'',
     coverage:'',mgmtFee:'',parkingClean:'',supplement:'',
     landPrice:'',launchDate:'',parkingPrice:'',parkingSize:'',collectFee:'',
+    totalMin:null,totalMax:null,
     vs:'',vsPublic:false,tagMode:'auto',tagManual:'normal',warn:false,warnReason:'',
     lat:null,lng:null,s591:'',sleju:'',s958:'',floorPlans:[]});
   cur=DB.projects.length-1;renderList();renderForm();markDirty();
@@ -288,6 +289,7 @@ function renderForm(){
   <div class="sec"><div class="sec-h" onclick="tog(this)">價 格 與 成 交</div><div class="sec-b">
     <div class="row3">${fld('均價（萬/坪）','avgPrice','number','step="0.01"')}${fld('最低價','minPrice','number','step="0.01"')}${fld('最高價','maxPrice','number','step="0.01"')}</div>
     <div class="row2">${fld('成交筆數','count','number')}${fld('總戶數','units','number')}</div>
+    <div class="row2">${fld('總價下限（萬）','totalMin','number','step="0.01"')}${fld('總價上限（萬）','totalMax','number','step="0.01"')}</div>
     ${fld('開價（無實登價時前台顯示，例 33~36萬/坪）','askPrice')}
     <div class="row2">
       <div><label>定位標籤</label><select id="f_tagMode">
@@ -352,7 +354,7 @@ function renderForm(){
   const set=(k,v)=>{const el=$('f_'+k);if(el)el.value=v??''};
   ['name','dev','status','floor','handover','addr','permit','loan','s591','sleju','s958','warnReason',
    'district','zone','askPrice',
-   'avgPrice','minPrice','maxPrice','count','units','tagMode','tagManual',
+   'avgPrice','minPrice','maxPrice','count','units','totalMin','totalMax','tagMode','tagManual',
    'layout','r1','r2','r3','r4','vs','notes','analysis','lat','lng',
    'coverage','mgmtFee','parkingClean','supplement',
    'landPrice','launchDate','parkingPrice','parkingSize','collectFee'].forEach(k=>set(k,p[k]));
@@ -363,7 +365,7 @@ function renderForm(){
   $('f_amenities').value=Object.entries(p.amenities||{}).map(([c,arr])=>`${c}：${arr.join('、')}`).join('\n');
 
   // 綁定
-  const num=['avgPrice','minPrice','maxPrice','count','units','r1','r2','r3','r4','lat','lng'];
+  const num=['avgPrice','minPrice','maxPrice','count','units','totalMin','totalMax','r1','r2','r3','r4','lat','lng'];
   document.querySelectorAll('#editor input,#editor textarea,#editor select').forEach(el=>{
     if(!el.id.startsWith('f_'))return;
     el.addEventListener('input',()=>{

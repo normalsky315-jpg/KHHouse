@@ -427,7 +427,7 @@ function openModal(i){
     <div class="price-hero">
       ${hasPrice(p)?`<span class="ph-num" style="color:${pc}">${p.avgPrice.toFixed(2)}</span>
       <span class="ph-unit">萬/坪</span>
-      <span style="font-size:14px;font-family:var(--mono);color:var(--dim)">${p.minPrice} ~ ${p.maxPrice}${p.count!=null?` · ${p.count} 筆成交`:''}</span>`
+      <span style="font-size:14px;font-family:var(--mono);color:var(--dim)">${(p.minPrice!=null&&p.maxPrice!=null)?`${p.minPrice} ~ ${p.maxPrice} 萬/坪`:''}${p.count!=null?` · ${p.count} 筆成交`:''}${(p.totalMin!=null&&p.totalMax!=null)?` · 總價 ${p.totalMin}~${p.totalMax}萬`:''}</span>`
       :`<span class="ph-num" style="color:var(--amber);font-size:34px">${p.askPrice?esc(p.askPrice):'價格待定'}</span>
       <span class="ph-unit">${p.askPrice?'開價（實價登錄待累積）':''}</span>`}</div>
     ${hasPrice(p)?`<div class="notes-box" style="margin-top:0">📊 依內政部不動產交易實價查詢服務網，近兩年真實成交紀錄共 <b>${p.count??'—'}</b> 筆整理而成（非店頭開價）。</div>`:''}
