@@ -69,6 +69,16 @@ label{display:block;font-size:12px;color:var(--dim);letter-spacing:.06em;margin:
 .fp-pre .cell{position:relative}
 .fp-pre img{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid var(--line)}
 .fp-pre .rm{position:absolute;top:2px;right:2px;background:var(--red);color:#fff;border:none;width:22px;height:22px;font-size:13px}
+.deals-edit{max-height:360px;overflow-y:auto;border:1px solid var(--line)}
+.deal-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.deal-row:last-child{border-bottom:none}
+.deal-row.off{opacity:.45}
+.deal-row input{width:auto;flex-shrink:0}
+.deal-row .dt{font-family:var(--mono);color:var(--dim);min-width:76px;flex-shrink:0}
+.deal-row .bd{min-width:70px;flex-shrink:0}
+.deal-row .lo{flex:1;min-width:100px}
+.deal-row .pr{font-family:var(--mono);white-space:nowrap;flex-shrink:0}
+.deal-row .nt{color:var(--red);font-size:12px}
 .savebar{position:fixed;bottom:0;left:0;right:0;background:var(--ink);padding:12px 26px;display:flex;gap:12px;align-items:center;z-index:500}
 .savebar .msg{color:var(--gold-soft);font-family:var(--mono);font-size:13px;flex:1}
 .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--gold-soft);padding:12px 26px;font-family:var(--mono);font-size:14px;z-index:9999;display:none;box-shadow:0 6px 24px rgba(0,0,0,.3)}
@@ -341,6 +351,11 @@ function renderForm(){
     <div class="fp-pre" id="fpPre"></div>
   </div></div>
 
+  <div class="sec closed"><div class="sec-h" onclick="tog(this)">實 價 登 錄 明 細（${(p.transactions||[]).length} 筆，來自整批匯入）</div><div class="sec-b">
+    <div style="font-size:13px;color:var(--dim);margin-bottom:6px">取消勾選＝該筆不在前台「實價登錄明細」表格顯示；不影響均價/最低最高價/總價區間/成交筆數等統計數字。逐筆內容需要靠重新匯入 Excel 更新，這裡只能調整顯示與否。</div>
+    <div class="deals-edit" id="dealsPre"></div>
+  </div></div>
+
   <div class="sec closed" id="pinSec"><div class="sec-h" onclick="tog(this);initPin()">位 置 編 輯（${p.lat!=null?`座標 ${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}`:'尚未設定座標'}）</div><div class="sec-b">
     <div style="font-size:13px;color:var(--dim)">拖曳圖釘到正確的<b>基地位置</b>（非接待中心），或貼 Google Maps 連結解析座標。</div>
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -386,7 +401,7 @@ function renderForm(){
       updTagPreview();markDirty();
     });
   });
-  renderFP(); updTagPreview(); pinMap=null;
+  renderFP(); renderDeals(); updTagPreview(); pinMap=null;
 }
 function tog(h){h.parentElement.classList.toggle('closed')}
 function updTagPreview(){
@@ -420,6 +435,24 @@ function rmFP(i){DB.projects[cur].floorPlans.splice(i,1);renderFP();markDirty()}
 function renderFP(){
   const arr=DB.projects[cur].floorPlans||[];
   $('fpPre').innerHTML=arr.map((u,i)=>`<div class="cell"><img src="${esc(u)}" loading="lazy" onerror="this.style.opacity=.25"><button class="rm" onclick="rmFP(${i})">×</button></div>`).join('');
+}
+
+/* ── 實價登錄明細（顯示/隱藏勾選） ── */
+function renderDeals(){
+  const arr=DB.projects[cur].transactions||[];
+  $('dealsPre').innerHTML=arr.length?arr.map((t,i)=>`
+    <div class="deal-row${t.visible===false?' off':''}">
+      <input type="checkbox" ${t.visible!==false?'checked':''} onchange="toggleDeal(${i},this.checked)">
+      <span class="dt">${esc(t.date)}</span>
+      <span class="bd">${esc(t.building)}</span>
+      <span class="lo">${esc(t.layout)}</span>
+      <span class="pr">${t.unitPrice??'—'}萬/坪・${t.totalPrice??'—'}萬</span>
+      ${t.note?`<span class="nt">⚠ ${esc(t.note)}</span>`:''}
+    </div>`).join(''):'<div style="padding:10px;color:var(--mute);font-size:13px">尚無實價登錄明細（需重新匯入 Excel）</div>';
+}
+function toggleDeal(i,checked){
+  DB.projects[cur].transactions[i].visible=checked;
+  renderDeals();markDirty();
 }
 
 /* ── 位置編輯 ── */
