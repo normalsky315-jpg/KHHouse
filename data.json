@@ -4116,7 +4116,7 @@
   {
    "name": "大橘新加坡5",
    "dev": "祥亞建設",
-   "status": "預售屋",
+   "status": "新成屋",
    "addr": "大寮路796巷",
    "district": "大寮",
    "zone": "",
@@ -4134,7 +4134,7 @@
    "r3": 0,
    "r4": 0,
    "loan": "75%",
-   "handover": "2027年第一季度",
+   "handover": "已交屋",
    "kit": [
     "櫻花整體廚具"
    ],
@@ -4165,8 +4165,8 @@
    "tagManual": "",
    "warn": false,
    "warnReason": "",
-   "lat": null,
-   "lng": null,
+   "lat": 22.5902155,
+   "lng": 120.4181221,
    "s591": "https://newhouse.591.com.tw/140712/detail",
    "s958": "http://house958.com/H11a35.html",
    "sleju": "",
